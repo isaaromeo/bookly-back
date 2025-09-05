@@ -3,12 +3,12 @@ const Schema = mongoose.Schema;
 
 const reviewSchema = new Schema(
   {
-    book: { type: mongoose.Types.ObjectId, ref: 'books', required: true},//La propiedad required hace que el campo sea obligatorio
-    user: { type: mongoose.Types.ObjectId, ref: 'users', required: true},
-    rating: { type: Number, required: true},
-    comments: { type: String, trim: true },
-    recommend: { type: Boolean }
-
+    title: { type: String, trim: true },
+    book: { type: mongoose.Types.ObjectId, ref: "books", required: true },
+    user: { type: mongoose.Types.ObjectId, ref: "users", required: true },
+    rating: { type: Number, required: true },
+    content: { type: String, trim: true },
+    likes: [{ type: mongoose.Types.ObjectId, ref: "users", required: true }], //O guardo sólo el num de likes o guardo los users que dan like
   },
   {
     timestamps: true,
