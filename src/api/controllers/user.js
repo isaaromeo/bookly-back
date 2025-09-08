@@ -8,30 +8,31 @@ const bcrypt = require('bcrypt');
 //Para obtener rol admin tendra que hacerlo un user admin desde updateUser
 const registerUser = async (req, res, next) => {
     try {
-        const user = new User(req.body);
+      const user = new User(req.body);
+      //rol user por defecto
+      user.rol = "user";
+      //La libreria/tbr/following/followers se inicializa vacio
+      user.library = [];
+      user.tbr = [];
+      user.following = [];
+      user.followers = [];
 
-        //La libreria/tbr/following/followers se inicializa vacio
-        user.library = [];
-        user.tbr = [];
-        user.following = [];
-        user.followers = [];
+      if (req.file) {
+        console.log(3);
+        user.profilePic = req.file.path;
+      }
 
-         if (req.file) {
-            console.log(3);
-             user.profilePic = req.file.path;
-            }
-
-        const userExists = await User.findOne({email: req.body.email}).exec();
-        if(userExists){
-            console.log(4);
-            return res.status(400).json("Usuario existente")
-        }// else {
-            const userDB = await user.save();
-            return res.status(201).json({ 
-                "message": "User created successfully!",
-                "element": userDB
-            });
-        //}
+      const userExists = await User.findOne({ email: req.body.email }).exec();
+      if (userExists) {
+        console.log(4);
+        return res.status(400).json("Usuario existente");
+      } // else {
+      const userDB = await user.save();
+      return res.status(201).json({
+        message: "User created successfully!",
+        element: userDB,
+      });
+      //}
     } catch (error) {
         res.status(400).json({ 
             "message": "error registrando al usuario",

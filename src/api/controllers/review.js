@@ -48,6 +48,8 @@ const postReview = async (req, res, next) =>{
             }
 
         }
+        //Inicializamos likes a 0(users)
+        newReview.likes = [];
         //guardamos review
         const savedReview = await newReview.save();
 
