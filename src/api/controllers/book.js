@@ -20,7 +20,7 @@ const getBookByid = async (req, res, next) =>{
     }
 }
 
-const getBookByCategory = async (req, res, next) =>{
+const getBooksByGenre = async (req, res, next) =>{
     const { categories } = req.params;
     try {
       
@@ -37,8 +37,24 @@ const getBookByCategory = async (req, res, next) =>{
     }
   }
 
+  const getBooksByAuthor = async (req, res, next) => {
+    const { author } = req.params;
+    try {
+      const books = await Book.find({
+        author: { $eq: author },
+      }).populate("reviews");
+      if (books.length === 0) {
+        return res.status(400).json("No books by this Author");
+      } else {
+        return res.status(200).json(books);
+      }
+    } catch (error) {
+      return res.status(400).json(error);
+    }
+  };
 
-const postBook = async (req, res, next) =>{
+
+const postBook = async (req, res, next) =>{ //solo lo puede hacer un admin
     try {
         const newBook = new Book(req.body);
         //comprobamos con el isbn que ese libro no exista ya en la bbdd
@@ -56,7 +72,7 @@ const postBook = async (req, res, next) =>{
     }
 }
 
-const deleteBook = async (req, res, next) =>{
+const deleteBook = async (req, res, next) =>{ //solo lo puede hacer un admin
     try {
         const { id } = req.params;
         const deletedBook = await Book.findByIdAndDelete(id);
@@ -68,7 +84,7 @@ const deleteBook = async (req, res, next) =>{
     }
 }
 
-const updateBook = async (req, res, next) =>{
+const updateBook = async (req, res, next) =>{ //solo lo puede hacer un admin
     try {
         const { id } = req.params;
         const newBook = new Book(req.body);
@@ -86,10 +102,11 @@ const updateBook = async (req, res, next) =>{
 }
 
 module.exports = {
-    getBooks,
-    getBookByid,
-    getBookByCategory,
-    postBook,
-    deleteBook,
-    updateBook
-}
+  getBooks,
+  getBookByid,
+  getBooksByGenre,
+  getBooksByAuthor,
+  postBook,
+  deleteBook,
+  updateBook,
+};

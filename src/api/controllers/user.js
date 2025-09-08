@@ -3,22 +3,27 @@ const { deleteImgCloudinary } = require("../../utils/deleteImgDB")
 const User = require("../models/user")
 const bcrypt = require('bcrypt');
 
+
+//al registrar un usuario solo se puede hacer con rol "user"
+//Para obtener rol admin tendra que hacerlo un user admin desde updateUser
 const registerUser = async (req, res, next) => {
     try {
         const user = new User(req.body);
-        //Comprobar que un usuario con rol "user" no puede crear un usuario con rol "admin"
-        if(user.rol === "admin" && req.user.rol !== "admin"){
-            user.rol = "user";
-        }
-        //La libreria se inicializa vacia
+
+        //La libreria/tbr/following/followers se inicializa vacio
         user.library = [];
+        user.tbr = [];
+        user.following = [];
+        user.followers = [];
 
          if (req.file) {
+            console.log(3);
              user.profilePic = req.file.path;
             }
 
         const userExists = await User.findOne({email: req.body.email}).exec();
         if(userExists){
+            console.log(4);
             return res.status(400).json("Usuario existente")
         }// else {
             const userDB = await user.save();
