@@ -1,10 +1,14 @@
 //Creamos el servidor
 const express = require("express");
+const cors = require("cors");
 const app = express();
 const port = 3001;
 
 //Consfiguramos el dotenv
 require("dotenv").config()
+
+//Config CORs
+app.use(cors());
 
 //Configuramos Cloudinary
 const { connectCloudinary } = require("./src/config/cloudinary")
