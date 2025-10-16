@@ -30,14 +30,11 @@ const getBookReviews = async (req, res, next) => {
 
 const postReview = async (req, res, next) =>{
     try {
-        //creamos review
         const newReview = new Review(req.body);
-        
-        //buscamos el libro al que pertenece
         const id = req.body.book;
         const book = await Book.findById(id);
         
-        //recogemos array de reviews y comprobamos que el usuario no ha dejado una review anteriormente
+        //comprobamos que el usuario no ha dejado una review anteriormente
         const reviewsIds = book.reviews;
 
         for(const id of reviewsIds){
@@ -48,12 +45,8 @@ const postReview = async (req, res, next) =>{
             }
 
         }
-        //Inicializamos likes a 0(users)
-        newReview.likes = [];
-        //guardamos review
+        newReview.likes = [ ];
         const savedReview = await newReview.save();
-
-        //actualizamos array reviews del libro
         reviewsIds.push(savedReview._id)
         const updatedBook = await Book.findByIdAndUpdate(id, {"reviews": reviewsIds}, {new: true});
         
@@ -98,10 +91,7 @@ const deleteReview = async (req, res, next) =>{
                 return res.status(404).json({ message: "Book not found" });
             }
 
-            //creamos array con ids en formato string
             const bookReviewsToString = book.reviews.map(e => e.toString());
-
-            //Buscamos el index del que queremos eliminar
             const deleteIndex = bookReviewsToString.indexOf(id);
 
             if (deleteIndex === -1) {

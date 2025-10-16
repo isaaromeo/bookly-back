@@ -155,12 +155,125 @@ const getUserInfo = async (req, res, next) => {
     }
 
 }
+
+const addToLibrary = async (req, res, next) => {
+  try {
+    const { userId, bookId } = req.params;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verificar que el libro no está ya en la biblioteca
+    if (user.library.includes(bookId)) {
+      return res.status(400).json({ message: "Book already in library" });
+    }
+
+    user.library.push(bookId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Book added to library successfully",
+      user: user
+    });
+
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
+
+// Eliminar libro de la biblioteca del usuario
+const removeFromLibrary = async (req, res, next) => {
+  try {
+    const { userId, bookId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verificar que el libro está en la biblioteca
+    if (!user.library.includes(bookId)) {
+      return res.status(400).json({ message: "Book not in library" });
+    }
+
+    user.library = user.library.filter(id => id.toString() !== bookId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Book removed from library successfully",
+      user: user
+    });
+
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
+
+// Añadir libro a TBR (To Be Read)
+const addToTBR = async (req, res, next) => {
+  try {
+    const { userId, bookId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verificar que el libro no está ya en TBR
+    if (user.tbr.includes(bookId)) {
+      return res.status(400).json({ message: "Book already in TBR" });
+    }
+    user.tbr.push(bookId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Book added to TBR successfully",
+      user: user
+    });
+
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
+
+// Eliminar libro de TBR
+const removeFromTBR = async (req, res, next) => {
+  try {
+    const { userId, bookId } = req.params;
+    
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verificar que el libro está en TBR
+    if (!user.tbr.includes(bookId)) {
+      return res.status(400).json({ message: "Book not in TBR" });
+    }
+
+    user.tbr = user.tbr.filter(id => id.toString() !== bookId);
+    await user.save();
+
+    return res.status(200).json({
+      message: "Book removed from TBR successfully",
+      user: user
+    });
+
+  } catch (error) {
+    return res.status(400).json(error);
+  }
+};
 module.exports = {
-    registerUser,
-    login,
-    updateUserRol,
-    updateUser,
-    deleteUser, 
-    getUserInfo
-}
+  registerUser,
+  login,
+  updateUserRol,
+  updateUser,
+  deleteUser,
+  getUserInfo,
+  addToLibrary,
+  removeFromLibrary,
+  addToTBR,
+  removeFromTBR,
+};
 
