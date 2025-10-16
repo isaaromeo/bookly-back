@@ -46,6 +46,7 @@ const registerUser = async (req, res, next) => {
      try {
          const { email, password} = req.body;
          const user = await User.findOne({ email: req.body.email});
+         console.log(req.body.password, user.password);
 
          if(!user) {
              return res.status(400).json("contraseña o usuario incorrectos");
@@ -178,7 +179,10 @@ const addToLibrary = async (req, res, next) => {
     });
 
   } catch (error) {
-    return res.status(400).json(error);
+    return res.status(400).json({
+      message: "Error adding book to library",
+      error: error.message,
+    });
   }
 };
 
