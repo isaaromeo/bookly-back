@@ -18,10 +18,10 @@ usersRouter.put("/update_rol/:id", isAuthAdmin, updateUserRol);
 usersRouter.put("/:id", isAuth, uploadUser.single("profilePic"), updateUser);
 usersRouter.delete("/:id", isAuth, deleteUser);
 usersRouter.get("/:id", isAuth, getUserInfo);
-userRouter.post("/:userId/library/:bookId", isAuth, addToLibrary);
-userRouter.delete("/:userId/library/:bookId", isAuth, removeFromLibrary);
-userRouter.post("/:userId/tbr/:bookId", isAuth, addToTBR);
-userRouter.delete("/:userId/tbr/:bookId", isAuth, removeFromTBR);
+usersRouter.post("/:userId/library/:bookId", isAuth, addToLibrary);
+usersRouter.delete("/:userId/library/:bookId", isAuth, removeFromLibrary);
+usersRouter.post("/:userId/tbr/:bookId", isAuth, addToTBR);
+usersRouter.delete("/:userId/tbr/:bookId", isAuth, removeFromTBR);
 
 module.exports = usersRouter;
 
