@@ -170,8 +170,15 @@ const addToLibrary = async (req, res, next) => {
       return res.status(400).json({ message: "Book already in library" });
     }
 
-    user.library.push(bookId);
-    await user.save();
+    // user.library.push(bookId);
+    // await user.save();
+
+    //Para que no se rehashee la contraseña?
+    await User.findByIdAndUpdate(
+      userId,
+      { $push: { library: bookId } },
+      { new: true }
+    );
 
     return res.status(200).json({
       message: "Book added to library successfully",
@@ -228,8 +235,16 @@ const addToTBR = async (req, res, next) => {
     if (user.tbr.includes(bookId)) {
       return res.status(400).json({ message: "Book already in TBR" });
     }
-    user.tbr.push(bookId);
-    await user.save();
+    // user.tbr.push(bookId);
+    // await user.save();
+
+    //evitar update del usuario entero para no perder credenciales
+    await User.findByIdAndUpdate(
+      userId,
+      { $push: { tbr: bookId } },
+      { new: true }
+    );
+
 
     return res.status(200).json({
       message: "Book added to TBR successfully",
