@@ -144,7 +144,10 @@ const deleteUser = async(req, res, next) => {
 const getUserInfo = async (req, res, next) => {
     try {
         const { id } = req.params;
-        const user = await User.findById(id).populate("library");
+        const user = await User.findById(id)
+          .populate("library") 
+          .populate("tbr") 
+          .populate("reviews");
 
         if(!user){
             res.status(404).json("User not found");
@@ -174,11 +177,14 @@ const addToLibrary = async (req, res, next) => {
     // await user.save();
 
     //Para que no se rehashee la contraseña?
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $push: { library: bookId } },
       { new: true }
     );
+
+     await updatedUser.populate("library", "title author cover rating genres");
+     await updatedUser.populate("tbr", "title author cover rating genres");
 
     return res.status(200).json({
       message: "Book added to library successfully",
