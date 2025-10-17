@@ -173,15 +173,29 @@ const addToLibrary = async (req, res, next) => {
       return res.status(400).json({ message: "Book already in library" });
     }
 
-    // user.library.push(bookId);
-    // await user.save();
+    //creamos operacion multiple
+    const updateOperation = {
+      $addToSet: { library: bookId }, // Añadir a library
+    };
+    //Si añade a libreria es porque ya lo ha leido entonces borrar de TBR
+    // if (user.tbr.includes(bookId)) {
+    //     console.log("borrando libro");
+    //     console.log("✅ TBR antes de borrar:", user.tbr);
+    //   userTbrUpdated = user.tbr.filter((id) => id.toString() !== bookId);
+    //   console.log("✅ TBR después de borrar:", user.tbr);
+    // }
 
-    //Para que no se rehashee la contraseña?
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $push: { library: bookId } },
-      { new: true }
-    );
+    if (user.tbr.includes(bookId)) {
+        //añadimos la operación de quitar book de tbr a la operación multiple
+      updateOperation.$pull = { tbr: bookId };
+    }
+
+    //Para que no se rehashee la contraseña y sea op multiple
+    const updatedUser = await User.findByIdAndUpdate(userId, updateOperation, {
+      new: true,
+    })
+      .populate("library")
+      .populate("tbr");
 
      await updatedUser.populate("library", "title author cover rating genres");
      await updatedUser.populate("tbr", "title author cover rating genres");

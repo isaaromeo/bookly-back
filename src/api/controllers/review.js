@@ -30,40 +30,62 @@ const getBookReviews = async (req, res, next) => {
 
 const postReview = async (req, res, next) =>{
     try {
-        const newReview = new Review(req.body);
-        const id = req.body.book;
-        const book = await Book.findById(id);
-        
-        //comprobamos que el usuario no ha dejado una review anteriormente
-        const reviewsIds = book.reviews;
+      const newReview = new Review(req.body);
+      const id = req.body.book;
+      const book = await Book.findById(id);
 
-        for(const id of reviewsIds){
-            let review = await Review.findById(id);
-    
-            if(review.user.equals(newReview.user)){
-                return res.status(400).json("User already reviewed this book!")
-            }
+      //comprobamos que el usuario no ha dejado una review anteriormente
+      const reviewsIds = book.reviews;
 
+      for (const id of reviewsIds) {
+        let review = await Review.findById(id);
+
+        if (review.user.equals(newReview.user)) {
+          return res.status(400).json("User already reviewed this book!");
         }
-        newReview.likes = [ ];
-        const savedReview = await newReview.save();
-        reviewsIds.push(savedReview._id)
-        const updatedBook = await Book.findByIdAndUpdate(id, {"reviews": reviewsIds}, {new: true});
-        
-        //añadimos el libro a la libreria del usuario
-        const user = await User.findById(newReview.user)
-        userLibrary = user.library;
-        userLibrary.push(book._id)
+      }
+      newReview.likes = [];
+      const savedReview = await newReview.save();
+      reviewsIds.push(savedReview._id);
+      const updatedBook = await Book.findByIdAndUpdate(
+        id,
+        { reviews: reviewsIds },
+        { new: true }
+      );
+      //añadimos el libro a la libreria del usuario y la reseña a la lista de reseñas
+      const updateOperation = {
+        $addToSet: {
+          library: id, 
+          reviews: savedReview._id, 
+        },
+      };
 
-        //añadimos la review a la lista de reviews del usuario
-        userReviews = user.reviews;
-        userReviews.push(savedReview._id)
-        const updateUser = await User.findByIdAndUpdate(newReview.user, 
-            {"library": userLibrary,
-             "reviews": userReviews
-            }, 
-            {new: true})
-        return res.status(201).json({savedReview, updatedBook})
+      const user = await User.findById(newReview.user);
+      //si el usuario tiene el libro en su TBR lo borramos
+      if (user.tbr.includes(id)) {
+        console.log("borrando libro");
+        updateOperation.$pull = { tbr: id };
+
+        // user.tbr = user.tbr.filter((id) => id.toString() !== id);
+      }
+
+      //añadimos el libro a la libreria del usuario
+      //   userLibrary = user.library;
+      //   userLibrary.push(book._id);
+
+      //añadimos la review a la lista de reviews del usuario
+      //   userReviews = user.reviews;
+      //   userReviews.push(savedReview._id);
+      const updatedUser = await User.findByIdAndUpdate(
+        user._id,
+        updateOperation,
+        { new: true }
+      )
+        .populate("library")
+        .populate("tbr")
+        .populate("reviews");
+
+      return res.status(201).json({ savedReview, updatedBook });
     } catch (error) {
         return res.status(400).json(error);
 
