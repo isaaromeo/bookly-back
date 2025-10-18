@@ -66,16 +66,8 @@ const postReview = async (req, res, next) =>{
         console.log("borrando libro");
         updateOperation.$pull = { tbr: id };
 
-        // user.tbr = user.tbr.filter((id) => id.toString() !== id);
       }
 
-      //añadimos el libro a la libreria del usuario
-      //   userLibrary = user.library;
-      //   userLibrary.push(book._id);
-
-      //añadimos la review a la lista de reviews del usuario
-      //   userReviews = user.reviews;
-      //   userReviews.push(savedReview._id);
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
         updateOperation,
@@ -185,10 +177,77 @@ const updateReview = async (req, res, next) =>{
     }
 }
 
+// Like a una review
+const likeReview = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user._id;
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+    const alreadyLiked = review.likes.includes(userId);
+    
+    if (alreadyLiked) {
+      // Si ya tiene like se quita 
+      review.likes = review.likes.filter(id => id.toString() !== userId.toString());
+      await review.save();
+      
+      return res.status(200).json({
+        message: "Like removed",
+        review: review,
+        liked: false
+      });
+    } else {
+      
+      review.likes.push(userId);
+      await review.save();
+      
+      return res.status(200).json({
+        message: "Review liked",
+        review: review,
+        liked: true
+      });
+    }
+
+  } catch (error) {
+    console.error("Error in likeReview:", error);
+    return res.status(400).json({ 
+      message: "Error liking review",
+      error: error.message 
+    });
+  }
+};
+
+const getReviewLikes = async (req, res, next) => {
+  try {
+    const { reviewId } = req.params;
+    
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    return res.status(200).json({
+      likesCount: review.likes.length,
+      likes: review.likes
+    });
+
+  } catch (error) {
+    return res.status(400).json({ 
+      message: "Error getting review likes",
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
     getReviews,
     getBookReviews,
     postReview,
     deleteReview,
-    updateReview
+    updateReview,
+    likeReview,
+    getReviewLikes
 }
