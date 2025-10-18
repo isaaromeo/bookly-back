@@ -194,11 +194,9 @@ const addToLibrary = async (req, res, next) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateOperation, {
       new: true,
     })
-      .populate("library")
-      .populate("tbr");
 
-     await updatedUser.populate("library", "title author cover rating genres");
-     await updatedUser.populate("tbr", "title author cover rating genres");
+     await updatedUser.populate("library");
+     await updatedUser.populate("tbr");
 
     return res.status(200).json({
       message: "Book added to library successfully",
@@ -227,7 +225,7 @@ const removeFromLibrary = async (req, res, next) => {
     if (!user.library.includes(bookId)) {
       return res.status(400).json({ message: "Book not in library" });
     }
-
+    //revisar por rehasheo tmbn
     user.library = user.library.filter(id => id.toString() !== bookId);
     await user.save();
 
@@ -290,7 +288,7 @@ const removeFromTBR = async (req, res, next) => {
     if (!user.tbr.includes(bookId)) {
       return res.status(400).json({ message: "Book not in TBR" });
     }
-
+    //revisar por rehasheo
     user.tbr = user.tbr.filter(id => id.toString() !== bookId);
     await user.save();
 
@@ -303,6 +301,102 @@ const removeFromTBR = async (req, res, next) => {
     return res.status(400).json(error);
   }
 };
+
+const followUser = async (req, res, next) => {
+  try {
+    const { followedUserId }  = req.params;
+    const userId = req.user._id;
+
+    if (userId === followedUserId) {
+      return res.status(400).json({ message: "You cannot follow yourself" });
+    }
+
+    const user = await User.findById(userId)
+    const followedUser = await User.findById(followedUserId);
+    
+    if (!user || !followedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const alreadyFollowing = user.following.includes(followedUserId);
+    let updatedUser;
+
+    if (alreadyFollowing) {
+      //dejar de seguir
+        updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $pull: { following: followedUserId } },
+          { new: true }
+        );
+        await User.findByIdAndUpdate(
+          followedUserId,
+          { $pull: { followers: userId } },
+          { new: true }
+        )
+      
+    } else {
+      
+        updatedUser = await User.findByIdAndUpdate(
+          userId,
+          { $addToSet: { following: followedUserId } },
+          { new: true }
+        );
+        await User.findByIdAndUpdate(
+          followedUserId,
+          { $addToSet: { followers: userId } },
+          { new: true }
+        )
+    }
+
+    return res.status(200).json({
+      message: alreadyFollowing
+        ? "Unfollowed successfully"
+        : "Followed successfully",
+      user: {
+        _id: updatedUser._id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        profilePic: updatedUser.profilePic,
+        following: updatedUser.following,
+        followers: updatedUser.followers,
+      },
+      // isFollowing: !alreadyFollowing
+    });
+
+  } catch (error) {
+    return res.status(400).json({ 
+      message: "Error following user",
+      error: error.message 
+    });
+  }
+};
+
+const getUserFollowData = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    //const { type = "followers" } = req.query; // para traer followers o following
+
+    const user = await User.findById(userId)
+      //.populate(type, "username profilePic email createdAt");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      followers: user.followers,
+      following: user.following,
+
+    });
+
+  } catch (error) {
+    return res.status(400).json({ 
+      message: "Error getting user data",
+      error: error.message 
+    });
+  }
+};
+
 module.exports = {
   registerUser,
   login,
@@ -314,5 +408,7 @@ module.exports = {
   removeFromLibrary,
   addToTBR,
   removeFromTBR,
+  followUser,
+  getUserFollowData
 };
 
