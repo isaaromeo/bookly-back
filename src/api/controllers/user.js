@@ -148,8 +148,14 @@ const getUserInfo = async (req, res, next) => {
           .populate("library", "title author cover rating")
           .populate("tbr", "title author cover rating")
           .populate("reviews")
-          .populate("followers", "username email profilePic")
-          .populate("following", "username email profilePic");
+          .populate(
+            "followers",
+            "username email profilePic followers following"
+          )
+          .populate(
+            "following",
+            "username email profilePic followers following"
+          );
 
         if(!user){
             res.status(404).json("User not found");
