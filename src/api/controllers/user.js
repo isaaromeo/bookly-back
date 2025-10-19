@@ -148,15 +148,36 @@ const getUserInfo = async (req, res, next) => {
           .populate("library", "title author cover rating")
           .populate("tbr", "title author cover rating")
           .populate("reviews")
-          .populate(
-            "followers",
-            "username email profilePic followers following"
-          )
-          .populate(
-            "following",
-            "username email profilePic followers following"
-          );
+          .populate({
+            path: "followers",
+            select: "username email profilePic followers following",
+            //para obetener follow data del follow data xd valorar si es too much
+            populate: [
+              {
+                path: "followers",
+                select: "username profilePic",
+              },
+              {
+                path: "following",
+                select: "username profilePic",
+              },
+            ],
+          })
+          .populate({
+            path: "following",
+            select: "username email profilePic followers following",
+            populate: [
+              {
+                path: "followers",
+                select: "username profilePic",
+              },
+              {
+                path: "following",
+                select: "username profilePic",
 
+              },
+            ],
+          });
         if(!user){
             res.status(404).json("User not found");
         }
@@ -327,11 +348,10 @@ const followUser = async (req, res, next) => {
     }
 
     const alreadyFollowing = user.following.includes(followedUserId);
-    let updatedUser;
 
     if (alreadyFollowing) {
       //dejar de seguir
-        updatedUser = await User.findByIdAndUpdate(
+         await User.findByIdAndUpdate(
           userId,
           { $pull: { following: followedUserId } },
           { new: true }
@@ -344,7 +364,7 @@ const followUser = async (req, res, next) => {
       
     } else {
       
-        updatedUser = await User.findByIdAndUpdate(
+        await User.findByIdAndUpdate(
           userId,
           { $addToSet: { following: followedUserId } },
           { new: true }
@@ -356,18 +376,29 @@ const followUser = async (req, res, next) => {
         )
     }
 
+     const updatedUser = await User.findById(userId)
+       .populate({
+         path: "followers",
+         select: "username email profilePic followers following",
+         populate: [
+           { path: "followers", select: "username profilePic" },
+           { path: "following", select: "username profilePic" },
+         ],
+       })
+       .populate({
+         path: "following",
+         select: "username email profilePic followers following",
+         populate: [
+           { path: "followers", select: "username profilePic" },
+           { path: "following", select: "username profilePic" },
+         ],
+       });
+
     return res.status(200).json({
       message: alreadyFollowing
         ? "Unfollowed successfully"
         : "Followed successfully",
-      user: {
-        _id: updatedUser._id,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        profilePic: updatedUser.profilePic,
-        following: updatedUser.following,
-        followers: updatedUser.followers,
-      },
+      user: updatedUser
       // isFollowing: !alreadyFollowing
     });
 
