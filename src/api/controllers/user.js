@@ -177,7 +177,7 @@ const updateUser = async(req, res, next) => {
 
       return res.status(200).json({
         message: "User updated successfully!",
-        element: updatedUser,
+        user: updatedUser,
         token: newToken
       });
     } catch (error) {
