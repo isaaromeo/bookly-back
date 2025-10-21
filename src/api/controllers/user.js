@@ -89,29 +89,88 @@ const updateUserRol = async(req, res, next) => {
 
 const updateUser = async(req, res, next) => {
     try {
-        const { id } = req.params;
+      const { id } = req.params;
+      const updateData = { ...req.body };
 
-        if (req.user._id.toString() !== id) {
-            return res.status(403).json({ message: "You can only update your own user" });
-        }
-        
-        const newUser = new User(req.body);
-        newUser._id = id;
+      if (req.user._id.toString() !== id) {
+        return res
+          .status(403)
+          .json({ message: "You can only update your own user" });
+      }
 
-        //Para que los usuarios con rol "user" no puedan actualizarse a rol "admin"
-        if(req.user.rol === "user"){
-            newUser.rol = "user"
+      const user = await User.findById(id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      //si se esta cambiando la contraseña
+      if (updateData.password) {
+        //verificar contraseña actual
+        if (!updateData.currentPassword) {
+          return res.status(400).json({
+            message: "Current password is required to change password",
+          });
         }
-        if (req.file) {
+
+        // Verificar que la contraseña actual es correcta
+        const isCurrentPasswordValid = await bcrypt.compare(
+          updateData.currentPassword,
+          user.password
+        );
+
+        if (!isCurrentPasswordValid) {
+          return res.status(400).json({ message: "password is incorrect" });
+        }
+
+        updateData.password = bcrypt.hashSync(updateData.password, 10);
+      }
+      
+      delete updateData.currentPassword;
+      delete updateData.confirmPassword;
+
+      //foto de perfil actualizada
+      if (req.file) {
+        if (user.profilePic) {
+          deleteImgCloudinary(user.profilePic);
+        }
+        updateData.profilePic = req.file.path;
+      }
+
+      //Para que los usuarios con rol "user" no puedan actualizarse a rol "admin"
+      if (req.user.rol === "user") {
+        newUser.rol = "user";
+      }
+      if (req.file) {
         newUser.profilePic = req.file.path;
-       }
-        const updatedUser = await User.findByIdAndUpdate(id, newUser, {new: true});
-        return res.status(200).json({ 
-            message: "User updated successfully!",
-            element: updatedUser
-    });
+      }
+      const updatedUser = await User.findByIdAndUpdate(id, updateData, {
+        new: true,
+      })
+        .populate("library", "title author cover rating")
+        .populate("tbr", "title author cover rating")
+        .populate("reviews")
+        .populate({
+          path: "followers",
+          select: "username email profilePic followers following",
+          populate: [
+            { path: "followers", select: "username profilePic" },
+            { path: "following", select: "username profilePic" },
+          ],
+        })
+        .populate({
+          path: "following",
+          select: "username email profilePic followers following",
+          populate: [
+            { path: "followers", select: "username profilePic" },
+            { path: "following", select: "username profilePic" },
+          ],
+        });
 
-      } catch (error) {
+      return res.status(200).json({
+        message: "User updated successfully!",
+        element: updatedUser,
+      });
+    } catch (error) {
         return res.status(400).json(error);
       }
 }
