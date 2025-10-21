@@ -90,7 +90,7 @@ const updateUserRol = async(req, res, next) => {
 const updateUser = async(req, res, next) => {
     try {
       const { id } = req.params;
-      const updateData = { ...req.body };
+      
 
       if (req.user._id.toString() !== id) {
         return res
@@ -102,6 +102,10 @@ const updateUser = async(req, res, next) => {
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
+
+      const updateData = { ...req.body };
+      console.log("Received update data:", updateData);
+      console.log("Received file:", req.file);
 
       //si se esta cambiando la contraseña
       if (updateData.password) {
@@ -138,11 +142,14 @@ const updateUser = async(req, res, next) => {
 
       //Para que los usuarios con rol "user" no puedan actualizarse a rol "admin"
       if (req.user.rol === "user") {
-        newUser.rol = "user";
+        updateData.rol = "user";
       }
-      if (req.file) {
-        newUser.profilePic = req.file.path;
-      }
+      // if (req.file) {
+      //   newUser.profilePic = req.file.path;
+      // }
+
+       console.log("Final update data:", updateData);
+
       const updatedUser = await User.findByIdAndUpdate(id, updateData, {
         new: true,
       })
