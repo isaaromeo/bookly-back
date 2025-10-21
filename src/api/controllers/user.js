@@ -151,6 +151,7 @@ const updateUser = async(req, res, next) => {
 
       const updatedUser = await User.findByIdAndUpdate(id, updateData, {
         new: true,
+        runValidators: true,
       })
         .populate("library", "title author cover rating")
         .populate("tbr", "title author cover rating")
