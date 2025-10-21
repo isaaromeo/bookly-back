@@ -90,7 +90,6 @@ const updateUserRol = async(req, res, next) => {
 const updateUser = async(req, res, next) => {
     try {
       const { id } = req.params;
-      
 
       if (req.user._id.toString() !== id) {
         return res
@@ -128,7 +127,7 @@ const updateUser = async(req, res, next) => {
 
         updateData.password = bcrypt.hashSync(updateData.password, 10);
       }
-      
+
       delete updateData.currentPassword;
       delete updateData.confirmPassword;
 
@@ -148,7 +147,7 @@ const updateUser = async(req, res, next) => {
       //   newUser.profilePic = req.file.path;
       // }
 
-       console.log("Final update data:", updateData);
+      console.log("Final update data:", updateData);
 
       const updatedUser = await User.findByIdAndUpdate(id, updateData, {
         new: true,
@@ -172,10 +171,14 @@ const updateUser = async(req, res, next) => {
             { path: "following", select: "username profilePic" },
           ],
         });
+      
+      //para actualizar el contexto
+      const newToken = generateToken(updatedUser._id, updatedUser.email);
 
       return res.status(200).json({
         message: "User updated successfully!",
         element: updatedUser,
+        token: newToken
       });
     } catch (error) {
         return res.status(400).json(error);
