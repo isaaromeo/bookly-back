@@ -226,7 +226,13 @@ const getUserInfo = async (req, res, next) => {
         const user = await User.findById(id)
           .populate("library", "title author cover rating")
           .populate("tbr", "title author cover rating")
-          .populate("reviews")
+          .populate({
+            path: "reviews",
+            populate: {
+              path: "book",  
+              select: "title cover author" 
+            }
+          })
           .populate({
             path: "followers",
             select: "username email profilePic followers following",
