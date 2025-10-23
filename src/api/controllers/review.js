@@ -214,12 +214,16 @@ const likeReview = async (req, res, next) => {
     } else {
       
       review.likes.push(userId);
-      await review.save();
+      await review.save()
+
+      const populatedReview = await Review.findById(reviewId)
+        .populate("user", "username profilePic")
+        .populate("book", "title cover author");
       
       return res.status(200).json({
         message: "Review liked",
-        review: review,
-        liked: true
+        review: populatedReview,
+        liked: !alreadyLiked
       });
     }
 
