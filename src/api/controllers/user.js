@@ -89,6 +89,15 @@ const updateUserRol = async(req, res, next) => {
 
 const updateUser = async(req, res, next) => {
     try {
+      //debug
+      console.log("=== BACKEND - INCOMING REQUEST ===");
+      console.log("req.body:", req.body);
+      console.log("req.file:", req.file);
+
+      // Verificar campos específicos
+      console.log("Username in req.body:", req.body.username);
+      console.log("Email in req.body:", req.body.email);
+      //------------
       const { id } = req.params;
 
       if (req.user._id.toString() !== id) {

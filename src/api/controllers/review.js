@@ -5,7 +5,9 @@ const mongoose = require("mongoose");
 
 const getReviews = async (req, res, next) =>{
     try {
-        const reviews = await Review.find().populate("book");
+        const reviews = await Review.find()
+          .populate("book", "title cover author")
+          .populate("user", "username profilePic"); 
         return res.status(200).json(reviews)
     } catch (error) {
         return res.status(400).json(error);
@@ -15,13 +17,18 @@ const getReviews = async (req, res, next) =>{
 
 const getBookReviews = async (req, res, next) => {
     try {
-        const { bookId } = req.params;
-        const book = await Book.findById(bookId).populate("reviews");
-        if(!book) {
-            res.status(404).json("Book not found")
-        }
-        const reviews = book.reviews;
-        return res.status(200).json(reviews)
+      const { bookId } = req.params;
+
+      const book = await Book.findById(bookId);
+       if (!book) {
+         return res.status(404).json("Book not found");
+       }
+      const reviews = await Review.find({ book: bookId }).populate(
+        "user",
+        "username profilePic"
+      )
+    
+      return res.status(200).json(reviews);
     } catch (error) {
         return res.status(400).json(error);
     }
@@ -44,8 +51,13 @@ const postReview = async (req, res, next) =>{
           return res.status(400).json("User already reviewed this book!");
         }
       }
+
       newReview.likes = [];
-      const savedReview = await newReview.save();
+      const savedReview = await newReview
+        .save()
+        .populate("user", "username profilePic")
+        .populate("book", "title");
+
       reviewsIds.push(savedReview._id);
       const updatedBook = await Book.findByIdAndUpdate(
         id,
