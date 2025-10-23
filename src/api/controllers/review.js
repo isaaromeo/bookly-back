@@ -37,6 +37,7 @@ const getBookReviews = async (req, res, next) => {
 
 const postReview = async (req, res, next) =>{
     try {
+      
       const newReview = new Review(req.body);
       const id = req.body.book;
       const book = await Book.findById(id);
@@ -48,15 +49,17 @@ const postReview = async (req, res, next) =>{
         let review = await Review.findById(id);
 
         if (review.user.equals(newReview.user)) {
-          return res.status(400).json("User already reviewed this book!");
+          return res.status(400).json({
+            message: "User already reviewed this book!",
+            user: newReview.user,
+            book: id,
+            existingReview: review._id,
+          });
         }
       }
 
       newReview.likes = [];
-      const savedReview = await newReview
-        .save()
-        .populate("user", "username profilePic")
-        .populate("book", "title");
+      const savedReview = await newReview.save()
 
       reviewsIds.push(savedReview._id);
       const updatedBook = await Book.findByIdAndUpdate(
