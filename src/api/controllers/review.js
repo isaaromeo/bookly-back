@@ -205,30 +205,25 @@ const likeReview = async (req, res, next) => {
     const alreadyLiked = review.likes.includes(userId);
     
     if (alreadyLiked) {
-      // Si ya tiene like se quita 
+      //si ya tiene like se quita 
       review.likes = review.likes.filter(id => id.toString() !== userId.toString());
       await review.save();
       
-      return res.status(200).json({
-        message: "Like removed",
-        review: review,
-        liked: false
-      });
     } else {
-      
       review.likes.push(userId);
-      await review.save()
 
-      const populatedReview = await Review.findById(reviewId)
-        .populate("user", "username profilePic")
-        .populate("book", "title cover author");
-      
-      return res.status(200).json({
-        message: "Review liked",
-        review: populatedReview,
-        liked: !alreadyLiked
-      });
     }
+    await review.save();
+
+    const populatedReview = await Review.findById(reviewId)
+      .populate("user", "username profilePic")
+      .populate("book", "title cover author");
+
+    return res.status(200).json({
+      message: alreadyLiked ? "Like removed" : "Review liked",
+      review: populatedReview,
+      liked: !alreadyLiked,
+    });
 
   } catch (error) {
     console.error("Error in likeReview:", error);
