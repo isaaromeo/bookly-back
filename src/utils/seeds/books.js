@@ -6,26 +6,67 @@ const mongoose = require("mongoose")
 
 mongoose
   .connect(
-    "mongodb+srv://isa:0j9FyWeOAfYcpNtx@cluster0.75ble.mongodb.net/Bookly?retryWrites=true&w=majority&appName=Cluster0"
+    "mongodb+srv://isa:9LDQo7ZjZ18hsBqA@cluster0.75ble.mongodb.net/Bookly?retryWrites=true&w=majority&appName=Cluster0"
   )
   .then(async () => {
-    //buscamos TODOS los libros de nuestra coleccion
-    const allBooks = await Book.find();
+    console.log("Starting smart book seeding...");
 
-    //si existen libros borramos la coleccion
-    if (allBooks.length) {
-      await Book.collection.drop();
+    let addedCount = 0;
+    let skippedCount = 0;
+
+    for (const bookData of books) {
+      try {
+        // verificar si el libro ya existe por ISBN
+        const existingBook = await Book.findOne({ isbn: bookData.isbn });
+
+        if (existingBook) {
+          console.log(
+            `Book already exists: "${bookData.title}" by ${bookData.author}`
+          );
+          skippedCount++;
+          continue;
+        }
+
+        //si no existe lo creamos
+        const newBook = new Book(bookData);
+        await newBook.save();
+        console.log(`Book added: "${bookData.title}" by ${bookData.author}`);
+        addedCount++;
+      } catch (error) {
+        console.error(
+          `Error processing book "${bookData.title}":`,
+          error.message
+        );
+      }
     }
+    console.log(
+      `Seeding completed! Added: ${addedCount}, Skipped: ${skippedCount}`
+    );
   })
   .catch((err) => {
-    console.log(`Error removing collection: ${err}`);
+    console.log(`Error during seeding: ${err}`);
   })
-  .then(async () => {
-    //rellenamos de nuevo con nuestro array de libros
-    await Book.insertMany(books);
-    console.log("Books added successfully!");
-  })
-  .catch((err) => {
-    console.log(`Error adding new books: ${err}`);
-  })
-  .finally(() => mongoose.disconnect());
+  .finally(() => {
+    mongoose.disconnect();
+    console.log("Database connection closed.");
+  });
+  //   //buscamos TODOS los libros de nuestra coleccion
+  //   const allBooks = await Book.find();
+
+  //   //si existen libros borramos la coleccion
+  //   if (allBooks.length) {
+  //     await Book.collection.drop();
+  //   }
+  // })
+  // .catch((err) => {
+  //   console.log(`Error removing collection: ${err}`);
+  // })
+  // .then(async () => {
+  //   //rellenamos de nuevo con nuestro array de libros
+  //   await Book.insertMany(books);
+  //   console.log("Books added successfully!");
+  // })
+  // .catch((err) => {
+  //   console.log(`Error adding new books: ${err}`);
+  // })
+  // .finally(() => mongoose.disconnect());

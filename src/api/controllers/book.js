@@ -1,5 +1,7 @@
 const Book = require("../models/book")
 const { deleteImgCloudinary } = require("../../utils/deleteImgDB")
+// const { seedFromCSV } = require("../../utils/seeds/csvBooks");
+const csv = require("csv-parser");
 
 const getBooks = async (req, res, next) =>{
     try {
@@ -54,22 +56,26 @@ const getBooksByGenre = async (req, res, next) =>{
   };
 
 
-const postBook = async (req, res, next) =>{ //solo lo puede hacer un admin
-    try {
-        const newBook = new Book(req.body);
-        //comprobamos con el isbn que ese libro no exista ya en la bbdd
-        isbn = Book.find({ isbn: newBook.isbn});
-        if(isbn){
-            return res.status(400).json("Book already created");
-        }
-        if (req.file) {
-            newBook.cover = req.file.path;
-           }
-        const savedBook = await newBook.save()
-        return res.status(201).json(newBook)
-    } catch (error) {
-        return res.status(400).json(error);
+const postBook = async (req, res, next) =>{
+  //solo lo puede hacer un admin
+  try {
+    const newBook = new Book(req.body);
+
+    //verificar si el libro ya existe
+    const existingBook = await Book.findOne({ isbn: newBook.isbn });
+    if (existingBook) {
+      return res.status(400).json("Book already exists");
     }
+
+    if (req.file) {
+      newBook.cover = req.file.path;
+    }
+
+    const savedBook = await newBook.save();
+    return res.status(201).json(savedBook);
+  } catch (error) {
+    return res.status(400).json(error);
+  }
 }
 
 const deleteBook = async (req, res, next) =>{ //solo lo puede hacer un admin
@@ -101,6 +107,100 @@ const updateBook = async (req, res, next) =>{ //solo lo puede hacer un admin
     }
 }
 
+const processCSVFromBuffer = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const results = {
+      added: 0,
+      skipped: 0,
+      errors: [],
+    };
+
+    const books = [];
+
+    //buffer-->string-->crear stream
+    const fileContent = fileBuffer.toString("utf8");
+    const { Readable } = require("stream");
+    const stream = Readable.from(fileContent);
+
+    stream
+      .pipe(csv())//cvs-->obj js
+      .on("data", (row) => {//por cada fila un obj
+        try {
+          books.push({
+            title: row.title,
+            author: row.author,
+            sinopsis: row.sinopsis,
+            pages: parseInt(row.pages),
+            genres: row.genres.split(","),
+            cover: row.cover,
+            isbn: row.isbn,
+            rating: parseFloat(row.rating),
+            reviews: [],
+            savedBy: [],
+            readBy: [],
+          });
+        } catch (error) {
+          results.errors.push(`Error parsing row: ${error.message}`);
+        }
+      })
+      .on("end", async () => {
+        //una vez leido se mirar si existe
+        for (const bookData of books) {
+          try {
+            const existingBook = await Book.findOne({ isbn: bookData.isbn });
+
+            if (existingBook) {
+              results.skipped++;
+              continue;
+            }
+            //si no existe guardar en bbdd
+            const newBook = new Book(bookData);
+            await newBook.save();
+            results.added++;
+          } catch (error) {
+            results.errors.push(
+              `Error with "${bookData.title}": ${error.message}`
+            );
+          }
+        }
+        resolve(results);
+      })
+      .on("error", (error) => {
+        reject(error);
+      });
+  });
+};
+
+const uploadBooksCSV = async (req, res, next) => {
+  try {
+
+    if (!req.file) {
+      return res.status(400).json({
+        message: "No CSV file uploaded",
+      });
+    }
+
+    // const filePath = req.file.path;
+
+    //con memoryStorage archivo se guarda en req.file.buffer
+    const fileBuffer = req.file.buffer;
+    const fileContent = fileBuffer.toString("utf8");
+
+    // Procesar el CSV usando la misma función de la semilla
+    // const results = await seedFromCSV(file);
+    const results = await processCSVFromBuffer(fileContent);
+
+    return res.status(200).json({
+      message: "CSV processing completed",
+      results: results,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      message: "Error processing CSV file",
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   getBooks,
   getBookByid,
@@ -109,4 +209,5 @@ module.exports = {
   postBook,
   deleteBook,
   updateBook,
+  uploadBooksCSV
 };

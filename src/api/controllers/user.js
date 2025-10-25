@@ -521,6 +521,7 @@ const getUserFollowData = async (req, res, next) => {
   }
 };
 
+
 module.exports = {
   registerUser,
   login,
