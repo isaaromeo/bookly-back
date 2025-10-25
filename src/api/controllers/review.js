@@ -126,75 +126,53 @@ const postReview = async (req, res, next) =>{
 
 const deleteReview = async (req, res, next) =>{
     try {
-        const { id, userId } = req.params;
+        const { reviewId, userId } = req.params;
         //Checkeamos que el usuario que quiere borrar la review es el mismo que la creo
         //o en su defecto un admin  
         const user = await User.findById(userId);
-        const review = await Review.findById(id);
+        const review = await Review.findById(reviewId);
 
         if (!review) {
             return res.status(404).json({ message: "Review not found" });
         }
 
-        if(user._id.toString() === review.user.toString() || user.rol === "admin"){
-            const deletedReview = await Review.findByIdAndDelete(id);
-            //borrar la review del array de reviews del libro al que pertenece
-            const book = await Book.findById(review.book);
+        const isOwner = review.user.toString() === userId;
+        const isAdmin = user.rol === "admin";
 
-            if(!book){
-                return res.status(404).json({ message: "Book not found" });
-            }
-
-            const bookReviewsToString = book.reviews.map(e => e.toString());
-            const deleteIndex = bookReviewsToString.indexOf(id);
-
-            if (deleteIndex === -1) {
-                return res.status(404).json({ message: "Review not found in the book" });
-            }
-            //Eliminamos el review del array
-            book.reviews.splice(deleteIndex, 1);
-            const updatedBook = await Book.findByIdAndUpdate(
-                review.book, 
-                { reviews: book.reviews}, 
-                { new: true});
-            //recalculamos rating despues de eliminiar
-            const newRating = await calculateBookRating(book._id);
-            
-            //borrar la review del array de reviews del user al que pertenece
-            const user = await User.findById(review.user);
-
-            if(!user){
-                return res.status(404).json({ message: "User not found" });
-            }
-
-            //creamos array con ids en formato string
-            const userReviewsToString = user.reviews.map(e => e.toString());
-
-            //Buscamos el index del que queremos eliminar
-            const deleteIndexUser = userReviewsToString.indexOf(id);
-
-            if (deleteIndex === -1) {
-                return res.status(404).json({ message: "Review not found in the user" });
-            }
-            //Eliminamos el review del array
-            user.reviews.splice(deleteIndexUser, 1);
-            const updatedUser = await User.findByIdAndUpdate(
-                review.user, 
-                { reviews: user.reviews}, 
-                { new: true});
-
-            return res.status(200).json({
-                message: "Review deleted sucessfully", 
-                element: deletedReview,
-                book: updatedBook
-            });
+        if (!isOwner && !isAdmin) {
+          return res
+            .status(403)
+            .json({ message: "Not authorized to delete this review" });
         }
-        else{
-            res.status(403).json("Forbidden");
+
+        const deletedReview = await Review.findByIdAndDelete(reviewId);
+        console.log("review borrado")
+        //actualizar libro
+        await Book.findByIdAndUpdate(review.book, { $pull: { reviews: reviewId } });
+        console.log("libro actualizado");
+        //recalcular rating
+        try {
+          await calculateBookRating(review.book);
+        } catch (error) {
+          console.warn("Rating recalculation failed:", error.message);
         }
-    } catch (error) {
-        return res.status(400).json(error);
+
+        //actualiza ruser
+        User.findByIdAndUpdate(review.user, { $pull: { reviews: reviewId } });
+        console.log("user actualizado");
+        return res.status(200).json({
+          message: "Review deleted successfully",
+          review: deletedReview,
+        });
+
+        } catch (error) {
+        console.error("Error in deleteReview:", error);
+        return res.status(400).json({
+            message: "Error deleting review",
+            error: error.message
+        });
     }
+
 }
 
 const updateReview = async (req, res, next) =>{

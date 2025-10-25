@@ -5,8 +5,8 @@ const reviewsRouter =  require("express").Router();
 
 reviewsRouter.get("/", getReviews);
 reviewsRouter.post("/", isAuth, postReview);
-reviewsRouter.put("/:id/:userId", isAuth, updateReview);
-reviewsRouter.delete("/:id/:userId", isAuth, deleteReview);
+reviewsRouter.put("/:reviewId/:userId", isAuth, updateReview);
+reviewsRouter.delete("/:reviewId/:userId", isAuth, deleteReview);
 reviewsRouter.get("/:bookId", getBookReviews); 
 reviewsRouter.post("/:reviewId/like", isAuth, likeReview);
 reviewsRouter.get("/:reviewId/likes", getReviewLikes);

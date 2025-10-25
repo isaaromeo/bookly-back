@@ -208,13 +208,13 @@ const calculateBookRating = async (bookId) => {
   
     const reviews = await Review.find({ book: bookId });
 
-    // if (reviews.length === 0) {
-    //   await Book.findByIdAndUpdate(bookId, {
-    //     rating: 0,
-    //     totalRatings: 0,
-    //   });
-    //   return 0;
-    // }
+     if (reviews.length === 0) {
+       await Book.findByIdAndUpdate(bookId, {
+         rating: 0,
+         totalRatings: 0,
+       });
+       return 0;
+     }
 
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     const averageRating = totalRating / reviews.length;
