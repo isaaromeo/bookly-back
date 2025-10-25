@@ -2,6 +2,7 @@ const Book = require("../models/book")
 const { deleteImgCloudinary } = require("../../utils/deleteImgDB")
 // const { seedFromCSV } = require("../../utils/seeds/csvBooks");
 const csv = require("csv-parser");
+const Review = require("../models/review");
 
 const getBooks = async (req, res, next) =>{
     try {
@@ -201,6 +202,35 @@ const uploadBooksCSV = async (req, res, next) => {
     });
   }
 };
+
+const calculateBookRating = async (bookId) => {
+  try {
+  
+    const reviews = await Review.find({ book: bookId });
+
+    // if (reviews.length === 0) {
+    //   await Book.findByIdAndUpdate(bookId, {
+    //     rating: 0,
+    //     totalRatings: 0,
+    //   });
+    //   return 0;
+    // }
+
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / reviews.length;
+    const roundedRating = Math.round(averageRating * 10) / 10;
+
+    await Book.findByIdAndUpdate(bookId, {
+      rating: roundedRating,
+      totalRatings: reviews.length,
+    });
+
+    return roundedRating;
+  } catch (error) {
+    console.error("Error calculating book rating:", error);
+    throw error;
+  }
+};
 module.exports = {
   getBooks,
   getBookByid,
@@ -209,5 +239,6 @@ module.exports = {
   postBook,
   deleteBook,
   updateBook,
-  uploadBooksCSV
+  uploadBooksCSV,
+  calculateBookRating
 };

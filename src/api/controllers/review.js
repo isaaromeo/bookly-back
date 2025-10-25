@@ -1,7 +1,7 @@
 const Review = require("../models/review");
 const Book = require("../models/book");
 const User = require("../models/user");
-const mongoose = require("mongoose");
+const { calculateBookRating } = require("./book")
 
 const getReviews = async (req, res, next) =>{
     try {
@@ -37,17 +37,26 @@ const getBookReviews = async (req, res, next) => {
 
 const postReview = async (req, res, next) =>{
     try {
-      
+      console.log("=== POST REVIEW START ===");
+      console.log("req body: ", req.body);
       const newReview = new Review(req.body);
       const id = req.body.book;
+
+      console.log("Finding book with id:", id);
       const book = await Book.findById(id);
+      if (!book) {
+        console.log("Book not found");
+        return res.status(404).json({ message: "Book not found" });
+      }
 
       //comprobamos que el usuario no ha dejado una review anteriormente
       const reviewsIds = book.reviews;
+      console.log("Existing reviews count:", reviewsIds.length);
 
       for (const id of reviewsIds) {
+        console.log("review id:", id);
         let review = await Review.findById(id);
-
+        console.log("review:", review)
         if (review.user.equals(newReview.user)) {
           return res.status(400).json({
             message: "User already reviewed this book!",
@@ -59,15 +68,25 @@ const postReview = async (req, res, next) =>{
       }
 
       newReview.likes = [];
-      const savedReview = await newReview.save()
+      console.log("Saving new review...");
+      const savedReview = await newReview.save();
+      console.log("Review saved:", savedReview._id);
 
       reviewsIds.push(savedReview._id);
+      console.log("Updating book reviews...");
       const updatedBook = await Book.findByIdAndUpdate(
         id,
         { reviews: reviewsIds },
         { new: true }
       );
+
+      //recalculamos rating
+      console.log("Calculating new rating...");
+      const newRating = await calculateBookRating(id);
+      console.log("New rating:", newRating);
+
       //añadimos el libro a la libreria del usuario y la reseña a la lista de reseñas
+      console.log("Updating user...");
       const updateOperation = {
         $addToSet: {
           library: id, 
@@ -83,18 +102,24 @@ const postReview = async (req, res, next) =>{
 
       }
 
-      const updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        updateOperation,
-        { new: true }
-      )
-        .populate("library")
-        .populate("tbr")
-        .populate("reviews");
+      const updatedUser = await User.findByIdAndUpdate(user._id, updateOperation,{ new: true })
+      .populate("library")
+      .populate("tbr")
+      .populate("reviews");
 
-      return res.status(201).json({ savedReview, updatedBook });
+      console.log("=== POST REVIEW SUCCESS ===");
+
+      return res.status(201).json({ savedReview, updatedBook, rating: newRating });
     } catch (error) {
-        return res.status(400).json(error);
+      console.log("=== POST REVIEW ERROR ===");
+      console.error("Error details:", error);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      return res.status(400).json({
+        message: "Error creating review",
+        error: error.message,
+        details: error.toString(),
+      });
 
     }
 }
@@ -132,7 +157,8 @@ const deleteReview = async (req, res, next) =>{
                 review.book, 
                 { reviews: book.reviews}, 
                 { new: true});
-
+            //recalculamos rating despues de eliminiar
+            const newRating = await calculateBookRating(book._id);
             
             //borrar la review del array de reviews del user al que pertenece
             const user = await User.findById(review.user);
@@ -182,6 +208,10 @@ const updateReview = async (req, res, next) =>{
             const newReview = new Review(req.body);
             newReview._id = id;
             const updatedReview = await Review.findByIdAndUpdate(id, newReview, { new: true})
+            //si se actualiza el rating se recalcula
+            if (req.body.rating !== undefined) {
+              await calculateBookRating(review.book);
+            }
             return res.status(200).json({message: "Review updated sucessfully", element: updatedReview})
         }
         else{
