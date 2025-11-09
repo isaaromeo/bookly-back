@@ -19,6 +19,9 @@ const bookSchema = new Schema(
           "mystery",
           "poetry",
           "dystopian",
+          "business",
+          "self-help",
+          
         ],
       },
     ],
