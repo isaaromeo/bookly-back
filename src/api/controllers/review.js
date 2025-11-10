@@ -37,7 +37,7 @@ const getBookReviews = async (req, res, next) => {
 
 const postReview = async (req, res, next) =>{
     try {
-      console.log("=== POST REVIEW START ===");
+      
       console.log("req body: ", req.body);
       const newReview = new Review(req.body);
       const id = req.body.book;
@@ -50,21 +50,42 @@ const postReview = async (req, res, next) =>{
       }
 
       //comprobamos que el usuario no ha dejado una review anteriormente
-      const reviewsIds = book.reviews;
-      console.log("Existing reviews count:", reviewsIds.length);
+      // const reviewsIds = book.reviews;
+      // console.log("Existing reviews count:", reviewsIds.length);
 
-      for (const id of reviewsIds) {
-        console.log("review id:", id);
-        let review = await Review.findById(id);
-        console.log("review:", review)
-        if (review.user.equals(newReview.user)) {
-          return res.status(400).json({
-            message: "User already reviewed this book!",
-            user: newReview.user,
-            book: id,
-            existingReview: review._id,
-          });
-        }
+      // for (const id of reviewsIds) {
+      //   console.log("review id:", id);
+      //   let review = await Review.findById(id);
+      //   console.log("review:", review);
+
+      //   if (!review) {
+      //   console.log("Review not found, skipping...");
+      //   continue; 
+      // }
+      //    if (review.user && review.user.equals(newReview.user)) {
+      //      return res.status(400).json({
+      //        message: "User already reviewed this book!",
+      //        user: newReview.user,
+      //        book: id,
+      //        existingReview: review._id,
+      //      });
+      //    }
+      // }
+
+      console.log("Checking for existing user review...");
+      const existingUserReview = await Review.findOne({
+        book: id,
+        user: newReview.user,
+      });
+
+      if (existingUserReview) {
+        console.log("User already reviewed this book:", existingUserReview._id);
+        return res.status(400).json({
+          message: "User already reviewed this book!",
+          user: newReview.user,
+          book: id,
+          existingReview: existingUserReview._id,
+        });
       }
 
       newReview.likes = [];
@@ -72,11 +93,9 @@ const postReview = async (req, res, next) =>{
       const savedReview = await newReview.save();
       console.log("Review saved:", savedReview._id);
 
-      reviewsIds.push(savedReview._id);
-      console.log("Updating book reviews...");
       const updatedBook = await Book.findByIdAndUpdate(
         id,
-        { reviews: reviewsIds },
+        { $push: { reviews: savedReview._id } },
         { new: true }
       );
 
@@ -97,7 +116,7 @@ const postReview = async (req, res, next) =>{
       const user = await User.findById(newReview.user);
       //si el usuario tiene el libro en su TBR lo borramos
       if (user.tbr.includes(id)) {
-        console.log("borrando libro");
+        console.log("removing book from TBR");
         updateOperation.$pull = { tbr: id };
 
       }
@@ -107,11 +126,11 @@ const postReview = async (req, res, next) =>{
       .populate("tbr")
       .populate("reviews");
 
-      console.log("=== POST REVIEW SUCCESS ===");
+      
 
-      return res.status(201).json({ savedReview, updatedBook, rating: newRating });
+      return res.status(201).json({ savedReview, updatedBook, rating: newRating, updatedUser });
     } catch (error) {
-      console.log("=== POST REVIEW ERROR ===");
+      
       console.error("Error details:", error);
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
