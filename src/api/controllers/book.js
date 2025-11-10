@@ -23,22 +23,24 @@ const getBookByid = async (req, res, next) =>{
     }
 }
 
-const getBooksByGenre = async (req, res, next) =>{
-    const { categories } = req.params;
-    try {
-      
-      const books = await Book.find({ categories: { $in: [categories] } }).populate("reviews");;
-      if(books.length === 0){
-        return res.status(400).json("No books in this category");
-
-      } else{
-        return res.status(200).json(books);
-      }
-      
-    } catch (error) {
-      return res.status(400).json(error);
-    }
+const getBooksByGenre = async (req, res, next) => {
+  try {
+    const { genres } = req.params;
+    
+    const books = await Book.find({ 
+      genres: { $in: [genres.toLowerCase()] } 
+    });
+    
+    
+    res.status(200).json(books);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ 
+      message: "Error retrieving books", 
+      error: error.message 
+    });
   }
+};
 
   const getBooksByAuthor = async (req, res, next) => {
     const { author } = req.params;
