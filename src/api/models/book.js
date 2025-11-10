@@ -25,7 +25,7 @@ const bookSchema = new Schema(
         ],
       },
     ],
-    cover: { type: String, trim: true, required: true },
+    cover: { type: String, trim: true, required: false },
     isbn: { type: String, trim: true, required: true },
     reviews: [{ type: mongoose.Types.ObjectId, ref: "reviews" }],
     rating: {
