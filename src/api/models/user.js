@@ -22,21 +22,20 @@ const userSchema = new Schema(
     tbr: [{ type: mongoose.Types.ObjectId, ref: "books" }], //libros pendientes de leer(to be read)
     reviews: [{ type: mongoose.Types.ObjectId, ref: "reviews" }],
     rol: { type: String, trim: true, required: true, default: "user" },
-    following: [{ type: mongoose.Types.ObjectId, ref: "users" }], //revisar si puedo usar el obj user dentro de si mismo
-    followers: [{ type: mongoose.Types.ObjectId, ref: "users" }], //revisar si puedo usar el obj user dentro de si mismo
+    following: [{ type: mongoose.Types.ObjectId, ref: "users" }], 
+    followers: [{ type: mongoose.Types.ObjectId, ref: "users" }], 
   },
   {
     timestamps: true,
   }
 );
 
-//encriptamos la psw antes(pre) de guardar(save) la psw en nuestro modelo
-//como parametro se usa una funcion normal(no arrow) porque es un this
+//encriptamos la psw antes de guardar la psw en nuestro modelo
+
 userSchema.pre('save', function (next) {
     this.password = bcrypt.hashSync(this.password, 10)
     next()
 })
 
-// Creamos y exportamos el modelo User
 const User = mongoose.model('users', userSchema, 'users');
 module.exports = User;

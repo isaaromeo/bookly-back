@@ -11,7 +11,7 @@ const registerUser = async (req, res, next) => {
       const user = new User(req.body);
       //rol user por defecto
       user.rol = "user";
-      //La libreria/tbr/following/followers se inicializa vacio
+      //libreria/tbr/following/followers se inicializa vacio
       user.library = [];
       user.tbr = [];
       user.following = [];
@@ -94,7 +94,7 @@ const updateUser = async(req, res, next) => {
       console.log("req.body:", req.body);
       console.log("req.file:", req.file);
 
-      // Verificar campos específicos
+      //erificar campos específicos
       console.log("Username in req.body:", req.body.username);
       console.log("Email in req.body:", req.body.email);
       //------------
@@ -124,7 +124,7 @@ const updateUser = async(req, res, next) => {
           });
         }
 
-        // Verificar que la contraseña actual es correcta
+
         const isCurrentPasswordValid = await bcrypt.compare(
           updateData.currentPassword,
           user.password
@@ -148,7 +148,7 @@ const updateUser = async(req, res, next) => {
         updateData.profilePic = req.file.path;
       }
 
-      //Para que los usuarios con rol "user" no puedan actualizarse a rol "admin"
+      //para que los usuarios con rol "user" no puedan actualizarse a rol "admin"
       if (req.user.rol === "user") {
         updateData.rol = "user";
       }
@@ -199,7 +199,7 @@ const deleteUser = async(req, res, next) => {
     try {
         const { id } = req.params;
 
-        // Verificar si el usuario que realiza la solicitud es un admin o el propio usuario
+        //verificar si el usuario que realiza la solicitud es un admin o el propio usuario
         if (req.user.rol !== "admin" && req.user._id.toString() !== id) {
             return res.status(403).json({ message: "You are not authorized to delete this user" });
         }
@@ -287,27 +287,27 @@ const addToLibrary = async (req, res, next) => {
     let message = "";
     let updateOperation = {};
 
-    // Verificar si el libro ya está en la biblioteca
+    //vrificar si el libro ya esta en library
     if (isAlreadyInLibrary) {
-      // Si está, lo ELIMINAMOS
+      
       updateOperation = {
-        $pull: { library: bookId }, // Eliminar de library
+        $pull: { library: bookId }, //quitar de library
       };
       message = "Book removed from library successfully";
     } else {
-      // Si NO está, lo AÑADIMOS
+     
       updateOperation = {
-        $addToSet: { library: bookId }, // Añadir a library
+        $addToSet: { library: bookId }, 
       };
       message = "Book added to library successfully";
 
-      // Si añade a library, quitar de TBR (si estaba)
+      //al añadir a library quitar de TBR
       if (user.tbr.includes(bookId)) {
         updateOperation.$pull = { ...updateOperation.$pull, tbr: bookId };
       }
     }
 
-    // Para que no se rehashee la contraseña y sea op multiple
+    //para que no se rehashee la contraseña y sea op multiple
     const updatedUser = await User.findByIdAndUpdate(userId, updateOperation, {
       new: true,
     })
@@ -328,7 +328,7 @@ const addToLibrary = async (req, res, next) => {
     });
   }
 };
-// Eliminar libro de la biblioteca del usuario
+
 const removeFromLibrary = async (req, res, next) => {
   try {
     const { userId, bookId } = req.params;
@@ -338,7 +338,7 @@ const removeFromLibrary = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Verificar que el libro está en la biblioteca
+ 
     if (!user.library.includes(bookId)) {
       return res.status(400).json({ message: "Book not in library" });
     }
@@ -356,7 +356,7 @@ const removeFromLibrary = async (req, res, next) => {
   }
 };
 
-// Añadir libro a TBR (To Be Read)
+
 const addToTBR = async (req, res, next) => {
   try {
     const { userId, bookId } = req.params;
@@ -371,15 +371,15 @@ const addToTBR = async (req, res, next) => {
     let message = "";
     let updateOperation = {};
 
-    // Verificar que el libro no está ya en TBR
+    //verificar que el libro no está ya en TBR
     if (isAlreadyInTBR) {
       updateOperation = {
-        $pull: { tbr: bookId } // Eliminar de TBR
+        $pull: { tbr: bookId } //si esta loquitamos
       };
       message = "Book removed from TBR successfully";
     } else {
-      // Si NO está, lo AÑADIMOS
-      // Solo añadir a TBR si NO está en Library
+      
+      //solo añadir a TBR si no está en Library
       if (user.library.includes(bookId)) {
         return res.status(400).json({ 
           message: "Book is already in your library. Remove it from library first to add to TBR.",
@@ -388,12 +388,11 @@ const addToTBR = async (req, res, next) => {
       }
       
       updateOperation = {
-        $addToSet: { tbr: bookId } // Añadir a TBR
+        $addToSet: { tbr: bookId }
       };
       message = "Book added to TBR successfully";
     }
 
-    // Actualizar el usuario
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       updateOperation,
@@ -407,7 +406,7 @@ const addToTBR = async (req, res, next) => {
     return res.status(200).json({
       message,
       user: updatedUser,
-      isInTBR: !isAlreadyInTBR // Devuelve el nuevo estado
+      isInTBR: !isAlreadyInTBR //devuelve el nuevo estado para usar en front y de toggle
     });
     
     // user.tbr.push(bookId);
@@ -434,7 +433,7 @@ const addToTBR = async (req, res, next) => {
   }
 };
 
-// Eliminar libro de TBR
+
 const removeFromTBR = async (req, res, next) => {
   try {
     const { userId, bookId } = req.params;
@@ -444,7 +443,6 @@ const removeFromTBR = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Verificar que el libro está en TBR
     if (!user.tbr.includes(bookId)) {
       return res.status(400).json({ message: "Book not in TBR" });
     }
