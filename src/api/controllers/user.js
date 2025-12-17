@@ -282,15 +282,33 @@ const addToLibrary = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const isAlreadyInLibrary = user.library.includes(bookId);
+
+    let message = "";
+    let updateOperation = {};
+
     // Verificar que el libro no está ya en la biblioteca
-    if (user.library.includes(bookId)) {
-      return res.status(400).json({ message: "Book already in library" });
-    }
+    if (isAlreadyInLibrary) {
+      //si esta lo eliminamos
+      updateOperation = {
+        $pull: { library: bookId }, // Eliminar de library
+      };
+      //return res.status(400).json({ message: "Book already in library" });
+      message = "Book removed from library successfully";
+    } else {
+      // Si NO está, lo AÑADIMOS
+      updateOperation = {
+        $addToSet: { library: bookId }, // Añadir a library
+      };
+      message = "Book added to library successfully";
+      if (user.tbr.includes(bookId)) {
+        updateOperation.$pull = { ...updateOperation.$pull, tbr: bookId };
+      }
 
     //creamos operacion multiple
-    const updateOperation = {
-      $addToSet: { library: bookId }, // Añadir a library
-    };
+    // const updateOperation = {
+    //   $addToSet: { library: bookId }, // Añadir a library
+    // };
     //Si añade a libreria es porque ya lo ha leido entonces borrar de TBR
     // if (user.tbr.includes(bookId)) {
     //     console.log("borrando libro");
@@ -299,23 +317,27 @@ const addToLibrary = async (req, res, next) => {
     //   console.log("✅ TBR después de borrar:", user.tbr);
     // }
 
-    if (user.tbr.includes(bookId)) {
-        //añadimos la operación de quitar book de tbr a la operación multiple
-      updateOperation.$pull = { tbr: bookId };
-    }
+    // if (user.tbr.includes(bookId)) {
+    //     //añadimos la operación de quitar book de tbr a la operación multiple
+    //   updateOperation.$pull = { tbr: bookId };
+    // }
 
     //Para que no se rehashee la contraseña y sea op multiple
     const updatedUser = await User.findByIdAndUpdate(userId, updateOperation, {
       new: true,
     })
+    .populate("library", "title author cover rating")
+    .populate("tbr", "title author cover rating")
+    .populate("followers", "username email profilePic")
+    .populate("following", "username email profilePic");
 
-     await updatedUser.populate("library");
-     await updatedUser.populate("tbr");
 
     return res.status(200).json({
-      message: "Book added to library successfully",
-      user: user
+      message,
+      user: updatedUser,
+      isInLibrary: !isAlreadyInLibrary
     });
+  }
 
   } catch (error) {
     return res.status(400).json({
@@ -363,28 +385,71 @@ const addToTBR = async (req, res, next) => {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const isAlreadyInTBR = user.tbr.includes(bookId);
+
+    let message = "";
+    let updateOperation = {};
+
     // Verificar que el libro no está ya en TBR
-    if (user.tbr.includes(bookId)) {
-      return res.status(400).json({ message: "Book already in TBR" });
+    if (isAlreadyInTBR) {
+      updateOperation = {
+        $pull: { tbr: bookId } // Eliminar de TBR
+      };
+      message = "Book removed from TBR successfully";
+    } else {
+      // Si NO está, lo AÑADIMOS
+      // Solo añadir a TBR si NO está en Library
+      if (user.library.includes(bookId)) {
+        return res.status(400).json({ 
+          message: "Book is already in your library. Remove it from library first to add to TBR.",
+          isInLibrary: true
+        });
+      }
+      
+      updateOperation = {
+        $addToSet: { tbr: bookId } // Añadir a TBR
+      };
+      message = "Book added to TBR successfully";
     }
+
+    // Actualizar el usuario
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      updateOperation,
+      { new: true }
+    )
+    .populate("library", "title author cover rating")
+    .populate("tbr", "title author cover rating")
+    .populate("followers", "username email profilePic")
+    .populate("following", "username email profilePic");
+
+    return res.status(200).json({
+      message,
+      user: updatedUser,
+      isInTBR: !isAlreadyInTBR // Devuelve el nuevo estado
+    });
+    
     // user.tbr.push(bookId);
     // await user.save();
 
     //evitar update del usuario entero para no perder credenciales
-    await User.findByIdAndUpdate(
-      userId,
-      { $push: { tbr: bookId } },
-      { new: true }
-    );
+    // await User.findByIdAndUpdate(
+    //   userId,
+    //   { $push: { tbr: bookId } },
+    //   { new: true }
+    // );
 
 
-    return res.status(200).json({
-      message: "Book added to TBR successfully",
-      user: user
-    });
+    // return res.status(200).json({
+    //   message: "Book added to TBR successfully",
+    //   user: user
+    // });
 
   } catch (error) {
-    return res.status(400).json(error);
+    return res.status(400).json({
+      message: "Error toggling book in TBR",
+      error: error.message,
+    });
   }
 };
 
