@@ -287,13 +287,12 @@ const addToLibrary = async (req, res, next) => {
     let message = "";
     let updateOperation = {};
 
-    // Verificar que el libro no está ya en la biblioteca
+    // Verificar si el libro ya está en la biblioteca
     if (isAlreadyInLibrary) {
-      //si esta lo eliminamos
+      // Si está, lo ELIMINAMOS
       updateOperation = {
         $pull: { library: bookId }, // Eliminar de library
       };
-      //return res.status(400).json({ message: "Book already in library" });
       message = "Book removed from library successfully";
     } else {
       // Si NO está, lo AÑADIMOS
@@ -301,44 +300,27 @@ const addToLibrary = async (req, res, next) => {
         $addToSet: { library: bookId }, // Añadir a library
       };
       message = "Book added to library successfully";
+
+      // Si añade a library, quitar de TBR (si estaba)
       if (user.tbr.includes(bookId)) {
         updateOperation.$pull = { ...updateOperation.$pull, tbr: bookId };
       }
+    }
 
-    //creamos operacion multiple
-    // const updateOperation = {
-    //   $addToSet: { library: bookId }, // Añadir a library
-    // };
-    //Si añade a libreria es porque ya lo ha leido entonces borrar de TBR
-    // if (user.tbr.includes(bookId)) {
-    //     console.log("borrando libro");
-    //     console.log("✅ TBR antes de borrar:", user.tbr);
-    //   userTbrUpdated = user.tbr.filter((id) => id.toString() !== bookId);
-    //   console.log("✅ TBR después de borrar:", user.tbr);
-    // }
-
-    // if (user.tbr.includes(bookId)) {
-    //     //añadimos la operación de quitar book de tbr a la operación multiple
-    //   updateOperation.$pull = { tbr: bookId };
-    // }
-
-    //Para que no se rehashee la contraseña y sea op multiple
+    // Para que no se rehashee la contraseña y sea op multiple
     const updatedUser = await User.findByIdAndUpdate(userId, updateOperation, {
       new: true,
     })
-    .populate("library", "title author cover rating")
-    .populate("tbr", "title author cover rating")
-    .populate("followers", "username email profilePic")
-    .populate("following", "username email profilePic");
-
+      .populate("library", "title author cover rating")
+      .populate("tbr", "title author cover rating")
+      .populate("followers", "username email profilePic")
+      .populate("following", "username email profilePic");
 
     return res.status(200).json({
       message,
       user: updatedUser,
-      isInLibrary: !isAlreadyInLibrary
+      isInLibrary: !isAlreadyInLibrary,
     });
-  }
-
   } catch (error) {
     return res.status(400).json({
       message: "Error adding book to library",
@@ -346,7 +328,6 @@ const addToLibrary = async (req, res, next) => {
     });
   }
 };
-
 // Eliminar libro de la biblioteca del usuario
 const removeFromLibrary = async (req, res, next) => {
   try {
